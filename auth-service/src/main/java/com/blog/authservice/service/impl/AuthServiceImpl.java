@@ -1,5 +1,7 @@
 package com.blog.authservice.service.impl;
 
+import com.blog.authservice.event.UserEventSender;
+import com.blog.authservice.event.UserRegisteredEvent;
 import com.blog.authservice.model.dto.JwtResponse;
 import com.blog.authservice.model.exception.ActionFailedException;
 import com.blog.authservice.model.exception.AuthFailedException;
@@ -19,8 +21,6 @@ import org.springframework.stereotype.Service;
 import com.blog.authservice.repository.UserRepository;
 import com.blog.authservice.service.AuthService;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -29,7 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-
+    private final UserEventSender userEventSender;
 
     @Override
     public void register(RegisterRequest request) {
@@ -45,23 +45,31 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
-                .roleName("USER") // Default role, can be changed later
+                .roleName("USER") // default role
                 .build();
 
-        userRepository.save(user);
+        UserEntity savedUser = userRepository.save(user);
+
+        userEventSender.sendUserRegisteredEvent(
+                UserRegisteredEvent.builder()
+                        .email(savedUser.getEmail())
+                        .fullName(savedUser.getFullName())
+                        .build()
+        );
     }
 
     @Override
     public JwtResponse authenticateUser(LoginRequest loginDto) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword())
+                    new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getPassword())
             );
-            UserEntity userEntity = userRepository.findByUsername(loginDto.getUsername())
-                    .orElseThrow(() -> new NotFoundException("User not found"));
-            String token = jwtService.generateToken(authentication);
-            Long principalId =  userEntity.getUserId();
 
+            UserEntity userEntity = userRepository.findByEmail(loginDto.getEmail())
+                    .orElseThrow(() -> new NotFoundException("User not found"));
+
+            String token = jwtService.generateToken(authentication);
+            Long principalId = userEntity.getUserId();
 
             JwtResponse.UserInfo userInfo = new JwtResponse.UserInfo(
                     principalId,
@@ -70,11 +78,7 @@ public class AuthServiceImpl implements AuthService {
                     userEntity.getRoleName()
             );
 
-            return new JwtResponse(
-                    token,
-                    86400000 / 1000,
-                    userInfo
-            );
+            return new JwtResponse(token, 86400, userInfo); // 86400 = 1 ngày (s)
         } catch (BadCredentialsException e) {
             throw new AuthFailedException("Invalid email or password");
         } catch (NotFoundException | ActionFailedException e) {
