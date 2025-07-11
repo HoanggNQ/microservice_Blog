@@ -1,6 +1,6 @@
-package repository;
+package com.blog.authservice.repository;
 
-import model.entity.UserEntity;
+import com.blog.authservice.model.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

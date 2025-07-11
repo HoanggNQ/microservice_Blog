@@ -1,4 +1,4 @@
-package model.entity;
+package com.blog.authservice.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
