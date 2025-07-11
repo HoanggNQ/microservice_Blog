@@ -32,22 +32,15 @@ public class JwtService {
         this.key = new SecretKeySpec(keyBytes, SignatureAlgorithm.HS256.getJcaName());
     }
 
-    public String generateToken1(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        return Jwts.builder()
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME_MS))
-                .signWith(key)
-                .compact();
-    }
+
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if (userDetails instanceof UserEntity) {
             UserEntity customUserDetails = (UserEntity) userDetails;
+
             return Jwts.builder()
-                    .setSubject(userDetails.getUsername())
+                    .setSubject(customUserDetails.getEmail()) // ✅ đổi từ username → email
                     .claim("userId", customUserDetails.getUserId())
                     .claim("role", customUserDetails.getRoleName())
                     .setIssuedAt(new Date())
@@ -64,14 +57,8 @@ public class JwtService {
                 .compact();
     }
 
-    public String generateRefreshToken(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        return Jwts.builder()
-                .setSubject(userDetails.getUsername())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME_MS))
-                .signWith(key)
-                .compact();
-    }
+
+
 
     public String extractUsername(String token) {
         return extractClaims(token, Claims::getSubject);
