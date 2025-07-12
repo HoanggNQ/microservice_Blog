@@ -19,7 +19,9 @@ public class JwtTokenUtils {
         // 🔥 Giải mã Base64 giống hệt bên auth-service
         byte[] decodedKey = Base64.getDecoder().decode(secret);
         this.key = new SecretKeySpec(decodedKey, "HmacSHA256");
-    }public String getUsernameFromToken(String token) {
+    }
+
+    public String getUsernameFromToken(String token) {
         return getClaims(token).getSubject(); // subject = username
     }
 
